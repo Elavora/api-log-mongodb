@@ -1,5 +1,10 @@
 # elavora/api-log-mongodb
 
+[![Packagist Version](https://img.shields.io/packagist/v/elavora/api-log-mongodb.svg?style=flat-square)](https://packagist.org/packages/elavora/api-log-mongodb)
+[![PHP Version](https://img.shields.io/packagist/php-v/elavora/api-log-mongodb.svg?style=flat-square)](https://packagist.org/packages/elavora/api-log-mongodb)
+[![Composer Quality](https://github.com/Elavora/api-log-mongodb/actions/workflows/quality.yml/badge.svg?branch=main)](https://github.com/Elavora/api-log-mongodb/actions/workflows/quality.yml)
+[![CodeQL](https://github.com/Elavora/api-log-mongodb/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/Elavora/api-log-mongodb/actions/workflows/codeql.yml)
+[![License](https://img.shields.io/packagist/l/elavora/api-log-mongodb.svg?style=flat-square)](LICENSE)
 Pacote opcional de logs em MongoDB para o framework Elavora.
 Ele registra `Elavora\Api\Framework\Logging\Logger` pronto para uso e o contrato local
 `Elavora\Api\Extension\LogMongoDb\Contracts\LogWriter`, que recebe documentos de log
