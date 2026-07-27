@@ -68,6 +68,9 @@ final class MongoLogConfig
         return "{$this->database}.{$this->collection}";
     }
 
+    /**
+     * @param array<string, mixed> $config
+     */
     private static function buildUri(array $config): string
     {
         $uri = self::optionalString($config['uri'] ?? null);
@@ -81,28 +84,62 @@ final class MongoLogConfig
         }
 
         $port = self::optionalPort($config['port'] ?? null);
-        $username = self::optionalString($config['username'] ?? null);
-        $password = self::optionalString($config['password'] ?? null);
+        $username = self::optionalCredential($config, 'username');
+        $password = self::optionalCredential($config, 'password');
 
         return 'mongodb://' . self::auth($username, $password) . $host . ':' . $port;
     }
 
     private static function auth(?string $username, ?string $password): string
     {
-        if ($username === null && $password === null) {
+        if (($username === null) !== ($password === null)) {
+            throw new InvalidArgumentException(
+                'Username e password do MongoDB devem ser informados juntos.'
+            );
+        }
+
+        if ($username === null || $password === null) {
             return '';
         }
 
-        return rawurlencode($username ?? '') . ':' . rawurlencode($password ?? '') . '@';
+        return rawurlencode($username) . ':' . rawurlencode($password) . '@';
     }
 
     private static function optionalPort(mixed $value): string
     {
-        if (is_int($value) && $value > 0) {
-            return (string) $value;
+        if ($value === null || (is_string($value) && trim($value) === '')) {
+            return '27017';
         }
 
-        return self::optionalString($value) ?? '27017';
+        if (is_int($value)) {
+            $port = $value;
+        } elseif (is_string($value) && preg_match('/^[0-9]+$/', trim($value)) === 1) {
+            $port = (int) trim($value);
+        } else {
+            throw new InvalidArgumentException('A porta MongoDB deve ser um inteiro entre 1 e 65535.');
+        }
+
+        if ($port < 1 || $port > 65535) {
+            throw new InvalidArgumentException('A porta MongoDB deve estar entre 1 e 65535.');
+        }
+
+        return (string) $port;
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     */
+    private static function optionalCredential(array $config, string $key): ?string
+    {
+        if (!array_key_exists($key, $config) || $config[$key] === null) {
+            return null;
+        }
+
+        if (!is_string($config[$key])) {
+            throw new InvalidArgumentException("A credencial MongoDB {$key} deve ser uma string.");
+        }
+
+        return self::optionalString($config[$key]);
     }
 
     private static function optionalString(mixed $value): ?string
