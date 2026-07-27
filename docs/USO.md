@@ -1,52 +1,39 @@
 # Guia de uso
 
-Pacote opcional de logs em MongoDB para o framework Elavora.
-
-## Instalacao
-
-```bash
-composer require elavora/api-log-mongodb
-```
-
-## Quando usar
-
-- Enviar logs para stdout, arquivo ou MongoDB sem trocar a aplicacao.
-- Registrar um writer compativel com o logger do framework.
-- Padronizar observabilidade por ambiente.
-
-## Exemplo rapido
+`MongoLogExtension` registra o writer MongoDB e o `Logger` do framework.
 
 ```php
 use Elavora\Api\Extension\LogMongoDb\MongoLogExtension;
+use Elavora\Api\Framework\Application;
+use Elavora\Api\Framework\Logging\Logger;
 
-$application->extend(new MongoLogExtension([
-    // Ajuste as opcoes conforme o destino de log escolhido.
+$application = Application::create()->extend(new MongoLogExtension([
+    'host' => 'mongo',
+    'port' => 27017,
+    'database' => 'api_logs',
+    'collection' => 'application_logs',
+    'username' => 'api',
+    'password' => 'secret',
 ]));
+
+$logger = $application->container()->get(Logger::class);
+$logger->warning('Fila atrasada', ['queue' => 'emails']);
 ```
 
-## Principais pontos de entrada
+A porta aceita inteiro ou string decimal entre `1` e `65535`; quando ausente, usa `27017`. `username` e `password` devem ser informados juntos e sao percent-encoded. Uma `uri` nao vazia substitui host, porta e credenciais separados.
 
-- `Elavora\Api\Extension\LogMongoDb\MongoLogConfig`
-- `Elavora\Api\Extension\LogMongoDb\MongoLogExtension`
-- `Elavora\Api\Extension\LogMongoDb\MongoLogWriter`
-- `Elavora\Api\Extension\LogMongoDb\Contracts\LogWriter`
+## Validacao do pacote
 
-## Dependencias de runtime
-
-- `ext-mongodb` `*`
-- `elavora/api-framework` `^0.3.1`
-
-## Validacao no projeto consumidor
-
-Depois de instalar o pacote, rode os testes da aplicacao consumidora. Para uma verificacao isolada do pacote, use container:
+A suite definitiva requer a extensao PHP `mongodb`. Execute a partir da raiz do clone:
 
 ```bash
-docker run --rm -v "${PWD}:/workspace" -w "/workspace/api-log-mongodb" composer:2 composer validate --strict --no-check-publish
-docker run --rm -v "${PWD}:/workspace" -w "/workspace/api-log-mongodb" composer:2 sh -lc "find . \\( -path ./.git -o -path ./vendor \\) -prune -o -name '*.php' -print0 | xargs -0 -r -n1 php -l"
+docker run --rm -v "${PWD}:/workspace" -w /workspace composer:2 sh -lc '
+  apk add --no-cache --virtual .build-deps $PHPIZE_DEPS openssl-dev &&
+  pecl install mongodb &&
+  docker-php-ext-enable mongodb &&
+  composer update --no-interaction --no-progress --prefer-dist &&
+  composer check
+'
 ```
 
-## Observacoes
-
-- Mantenha regras de produto fora deste pacote.
-- Prefira configurar extensoes no bootstrap da aplicacao.
-- Instale apenas os modulos que a aplicacao realmente usa.
+Para testes unitarios sem a extensao, a instalacao pode usar `--ignore-platform-req=ext-mongodb`; isso nao substitui a validacao definitiva.

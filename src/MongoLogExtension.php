@@ -10,6 +10,7 @@ use Elavora\Api\Framework\Contracts\Extension;
 use Elavora\Api\Framework\Contracts\LogWriter as FrameworkLogWriter;
 use Elavora\Api\Framework\Logging\Logger;
 use Closure;
+use LogicException;
 
 final class MongoLogExtension implements Extension
 {
@@ -41,12 +42,22 @@ final class MongoLogExtension implements Extension
         );
         $application->container()->bind(
             FrameworkLogWriter::class,
-            fn (): FrameworkLogWriter => $application->container()->get(LogWriter::class)
+            fn (): FrameworkLogWriter => $this->writer($application)
         );
         $application->container()->bind(
             Logger::class,
-            fn (): Logger => new Logger($application->container()->get(LogWriter::class))
+            fn (): Logger => new Logger($this->writer($application))
         );
+    }
+
+    private function writer(Application $application): LogWriter
+    {
+        $writer = $application->container()->get(LogWriter::class);
+        if (!$writer instanceof LogWriter) {
+            throw new LogicException('O container retornou um writer MongoDB invalido.');
+        }
+
+        return $writer;
     }
 
     private function createWriter(): LogWriter
