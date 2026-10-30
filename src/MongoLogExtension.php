@@ -37,15 +37,15 @@ final class MongoLogExtension implements Extension
     {
         $application->container()->bind(
             LogWriter::class,
-            fn (): LogWriter => $this->createWriter()
+            fn(): LogWriter => $this->createWriter(),
         );
         $application->container()->bind(
             FrameworkLogWriter::class,
-            fn (): FrameworkLogWriter => $application->container()->get(LogWriter::class)
+            fn(): FrameworkLogWriter => $application->container()->get(LogWriter::class),
         );
         $application->container()->bind(
             Logger::class,
-            fn (): Logger => new Logger($application->container()->get(LogWriter::class))
+            fn(): Logger => new Logger($application->container()->get(LogWriter::class)),
         );
     }
 

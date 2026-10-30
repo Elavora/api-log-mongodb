@@ -6,6 +6,4 @@ namespace Elavora\Api\Extension\LogMongoDb\Contracts;
 
 use Elavora\Api\Framework\Contracts\LogWriter as FrameworkLogWriter;
 
-interface LogWriter extends FrameworkLogWriter
-{
-}
+interface LogWriter extends FrameworkLogWriter {}

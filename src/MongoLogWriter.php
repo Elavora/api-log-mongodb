@@ -22,7 +22,7 @@ final class MongoLogWriter implements LogWriter
      */
     public function __construct(
         private readonly MongoLogConfig $config,
-        callable $insertDocument
+        callable $insertDocument,
     ) {
         $this->insertDocument = Closure::fromCallable($insertDocument);
     }
@@ -49,9 +49,9 @@ final class MongoLogWriter implements LogWriter
                     $bulk,
                     [
                         'writeConcern' => new WriteConcern(WriteConcern::MAJORITY, 1000),
-                    ]
+                    ],
                 );
-            }
+            },
         );
     }
 
