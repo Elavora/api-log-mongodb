@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Elavora\Api\Extension\LogMongoDb\Contracts\LogWriter;
 use Elavora\Api\Extension\LogMongoDb\MongoLogConfig;
 use Elavora\Api\Extension\LogMongoDb\MongoLogExtension;
+use Elavora\Api\Extension\LogMongoDb\MongoLogWriter;
 use Elavora\Api\Framework\Application;
 use Elavora\Api\Framework\Logging\Logger;
 use PHPUnit\Framework\TestCase;
@@ -102,12 +103,14 @@ final class MongoLoggerTest extends TestCase
                 'database' => 'api_logs',
                 'collection' => 'application_logs',
             ],
-            static fn(MongoLogConfig $config): LogWriter => new Elavora\Api\Extension\LogMongoDb\MongoLogWriter(
-                $config,
-                static function (string $namespace, array $entry) use (&$stored): void {
-                    $stored[] = [$namespace, $entry];
-                },
-            ),
+            static function (MongoLogConfig $config) use (&$stored): LogWriter {
+                return new MongoLogWriter(
+                    $config,
+                    static function (string $namespace, array $entry) use (&$stored): void {
+                        $stored[] = [$namespace, $entry];
+                    },
+                );
+            },
         ));
 
         $application->container()->get(Logger::class)->info('Requisicao recebida', ['route' => '/health']);
