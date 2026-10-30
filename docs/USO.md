@@ -36,14 +36,16 @@ $application->extend(new MongoLogExtension([
 - `ext-mongodb` `*`
 - `elavora/api-framework` `^0.3.1`
 
-## Validacao no projeto consumidor
+## Validacao do pacote
 
-Depois de instalar o pacote, rode os testes da aplicacao consumidora. Para uma verificacao isolada do pacote, use container:
+Como rodar os testes, o lint e o PHPStan, e como reproduzir o CI, esta em
+[Desenvolvimento e testes](DESENVOLVIMENTO.md). A extensao `mongodb` nao existe na imagem de desenvolvimento: veja
+[Extensao mongodb](DESENVOLVIMENTO.md#extensão-mongodb). Para validar o pacote dentro de uma aplicacao consumidora,
+rode os testes dela depois de instalar o pacote.
 
-```bash
-docker run --rm -v "${PWD}:/workspace" -w "/workspace/api-log-mongodb" composer:2 composer validate --strict --no-check-publish
-docker run --rm -v "${PWD}:/workspace" -w "/workspace/api-log-mongodb" composer:2 sh -lc "find . \\( -path ./.git -o -path ./vendor \\) -prune -o -name '*.php' -print0 | xargs -0 -r -n1 php -l"
-```
+O `composer.json` ganha `require-dev` (`elavora/code-standards`, `phpstan/phpstan`), `scripts` (`lint`, `analyse`,
+`check`) e `config` de qualidade: veja [`composer.json` em Automacao](AUTOMACAO.md#composerjson). A secao `require`
+(`ext-mongodb`, `elavora/api-framework`) nao muda.
 
 ## Observacoes
 
