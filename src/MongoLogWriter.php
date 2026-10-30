@@ -13,7 +13,7 @@ use RuntimeException;
 
 final class MongoLogWriter implements LogWriter
 {
-    /** @var Closure(string, array): void */
+    /** @var Closure(string, array<string, mixed>): void */
     private readonly Closure $insertDocument;
 
     /**

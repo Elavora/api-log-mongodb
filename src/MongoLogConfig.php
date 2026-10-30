@@ -67,6 +67,9 @@ final class MongoLogConfig
         return "{$this->database}.{$this->collection}";
     }
 
+    /**
+     * @param array<string, mixed> $config
+     */
     private static function buildUri(array $config): string
     {
         $uri = self::optionalString($config['uri'] ?? null);
