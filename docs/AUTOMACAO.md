@@ -46,10 +46,9 @@ uses: Elavora/.github/.github/workflows/release.yml@2a6cd142f0cd3f1aac93b98d19f5
   versão pelo token OIDC do GitHub. Por isso cada job que chama o central concede `id-token: write`. Detalhes em
   [Versão da automação](https://github.com/Elavora/.github/blob/1.3.2/docs/versao-da-automacao.md).
 
-### Nenhum check trava o merge
+### Checks do PR
 
-Nenhum check é obrigatório na proteção da `main`. Todos os workflows rodam em cada PR e mostram o resultado, mas quem
-revisa decide o merge.
+Todos os workflows abaixo rodam em cada PR e mostram o resultado. O PR só é integrado com todos os checks verdes.
 
 | Check no PR | Workflow |
 | --- | --- |
@@ -58,17 +57,16 @@ revisa decide o merge.
 | `Dependency Review` | `dependency-review.yml` |
 | `Automação` | `automation.yml` |
 
-A proteção da `main` é uma configuração do GitHub, fora dos arquivos do repositório. A retirada dos checks
-obrigatórios antigos é feita pelo orquestrador antes do merge do PR de adoção. Sem isso, o PR ficaria esperando um
-check que não roda mais. As outras regras da proteção (histórico linear, conversas resolvidas, sem force push) não
-mudam.
+A proteção da `main` é uma configuração do GitHub, fora dos arquivos do repositório, e esta adoção não a altera. Se a
+proteção exigir um check com nome diferente dos acima, o PR fica esperando esse check: isso é tratado no GitHub, e
+quem integra o PR não ignora checks vermelhos.
 
 ### O que não é feito por arquivo
 
 Estas ações acontecem no GitHub e não têm teste:
 
 - o secret `PACKAGIST_WEBHOOK_URL` (da organização) precisa estar disponível para o repositório;
-- a proteção da `main` perde os checks obrigatórios (acima);
+- os checks exigidos pela proteção da `main` (acima);
 - depois do merge, o `sync-labels` pode ser disparado uma vez à mão (`workflow_dispatch`) para o repositório já ficar
   com as 17 labels do [catálogo](https://github.com/Elavora/.github/blob/1.3.2/docs/labels.md).
 
@@ -202,7 +200,7 @@ jobs:
       PACKAGIST_WEBHOOK_URL: ${{ secrets.PACKAGIST_WEBHOOK_URL }}
 ```
 
-- Sem bloco `with`. O título da release vem do nome do repositório (`Elavora/<repo> 0.2.1`). `packagist: false` é
+- Sem bloco `with`. O título da release vem do nome do repositório (`Elavora/<repo> 1.0.1`). `packagist: false` é
   proibido: o Packagist é avisado a cada release.
 - O único secret repassado é `PACKAGIST_WEBHOOK_URL`.
 
@@ -412,12 +410,17 @@ Conteúdo exato:
 ### `composer.json`
 
 O arquivo é formatado com **2 espaços** de indentação (regra do `.editorconfig` para `*.json`), sem espaços duplos
-depois de `:` e sem sequências `\uXXXX`. O arquivo de hoje tem espaços duplos e escapes como `">=8.1"`: o PR
-passa a gravar `">=8.1"`. Depois do PR, ele tem:
+depois de `:` e sem sequências `\uXXXX` (por exemplo, `">=8.3"`, e não `">=8.3"`). O arquivo de hoje tem espaços
+duplos e escapes: o PR passa a gravar sem eles. Depois do PR, ele tem:
 
 ```json
 {
   "name": "elavora/<repo>",
+  "require": {
+    "php": ">=8.3",
+    "ext-mongodb": "*",
+    "elavora/api-framework": "^2.0"
+  },
   "require-dev": {
     "elavora/code-standards": "^1.1",
     "phpstan/phpstan": "^2.2",
@@ -437,15 +440,36 @@ passa a gravar `">=8.1"`. Depois do PR, ele tem:
   },
   "config": {
     "sort-packages": true
+  },
+  "extra": {
+    "branch-alias": {
+      "dev-main": "1.0-dev"
+    }
   }
 }
 ```
 
-O exemplo mostra só as chaves que esta adoção cria ou muda. As demais (`description`, `type`, `license`, `require`,
-`autoload`, `extra.branch-alias`) continuam como estão, na ordem atual.
+O exemplo mostra só as chaves que este PR cria ou muda. As demais (`description`, `type`, `license`, `autoload`)
+continuam como estão, na ordem atual.
 
-- **`require` não muda** nesta adoção: `php` continua `>=8.1`, `ext-mongodb` continua `*` e `elavora/api-framework`
-  continua `^0.3.1`. O suporte ao framework 2 e a mudança de versão do PHP são outra fase (outro PR).
+- **Este PR também é o upgrade para o framework 2.** Antes, `php` era `>=8.1` e `elavora/api-framework` era `^0.3.1`.
+  Agora `php` é `>=8.3` (o que o framework 2 exige) e `elavora/api-framework` é `^2.0`. Não existe `^0.3`, `^1.0`
+  nem uma união como `^1.0 || ^2.0` em `require`.
+- `ext-mongodb` continua em `require` (`*`), sem mudança. A imagem `ghcr.io/elavora/php-dev:8.3-latest` (a partir da
+  0.4.0) já traz a extensão `mongodb`, então o `composer install` e os testes rodam no CI sem instalar nada
+  ([Desenvolvimento e testes](DESENVOLVIMENTO.md#extensão-mongodb)). Nenhum teste precisa de servidor MongoDB.
+- `extra.branch-alias`: `dev-main` passa de `0.1-dev` para `1.0-dev`, o major que o merge publica
+  ([Versões e release](#versões-e-release)).
+- O `src/` não muda de comportamento. O namespace `Elavora\Api\Extension\LogMongoDb` e as classes públicas
+  (`MongoLogConfig`, `MongoLogWriter`, `MongoLogExtension` e `Contracts\LogWriter`) mantêm assinaturas e regras (veja
+  [Versão e compatibilidade](USO.md#versão-e-compatibilidade)). `Contracts\LogWriter` estende
+  `Elavora\Api\Framework\Contracts\LogWriter`, e a extensão implementa `Elavora\Api\Framework\Contracts\Extension` e
+  usa `Elavora\Api\Framework\Application` e `Elavora\Api\Framework\Logging\Logger`. No framework `0.x` que o
+  `composer install` resolve na `main`, o contrato `LogWriter` não existe nesse namespace, e por isso 5 dos 9 testes
+  da `main` falham com `Interface "Elavora\Api\Framework\Contracts\LogWriter" not found`: a causa é a dependência, e o
+  upgrade resolve (com o framework 2.0.0, a suíte passa inteira sem mexer no `src/`).
+- Os ajustes do PHPStan (nível 8, sem `baseline`) e do estilo PER-CS vão em commits próprios e não mudam o
+  comportamento.
 
 - `elavora/code-standards` fica em `require-dev`, nunca em `require`. A restrição é `^1.` seguido do minor (1 ou
   maior) e, opcionalmente, do patch. O minor mínimo é 1 porque o subcomando `lint` só existe a partir da 1.1.0, e o CI
@@ -521,22 +545,14 @@ passando. Com o bloco, o comando de cobertura cumpre três condições:
 
 ### Extensão `mongodb`
 
-O pacote exige `ext-mongodb` (`require`), e a imagem `ghcr.io/elavora/php-dev:8.3-latest` **não traz** essa extensão.
-Sem ela, `composer install` falha com `ext-mongodb * is missing from your system`. O código só usa as classes
-`MongoDB\Driver\*` em `src/MongoLogWriter.php`; os testes não precisam da extensão carregada.
+O pacote exige `ext-mongodb` (`require`), e a imagem `ghcr.io/elavora/php-dev:8.3-latest` (a partir da 0.4.0) **já traz**
+essa extensão. O `composer install` do pipeline central (`composer install --no-progress --prefer-dist`, sem ignorar
+requisitos de plataforma) passa sem instalar nada, e o chamador não precisa de bloco `with`.
 
-| Onde | Como resolver |
-| --- | --- |
-| Máquina de desenvolvimento | instalar a extensão no container com `pecl` (precisa de root; passo a passo em [Desenvolvimento e testes](DESENVOLVIMENTO.md#extensão-mongodb)) ou, só para rodar os testes, `composer install --ignore-platform-req=ext-mongodb` |
-| CI (`quality.yml`) | **pendente**: o pipeline central roda `composer install --no-progress --prefer-dist` sem permitir ignorar requisitos de plataforma, e o chamador não tem bloco `with` |
-
-- Enquanto a imagem ou o pipeline central não resolverem a extensão, o check `quality / Qualidade PHP` falha neste
-  repositório já no passo de instalação. Isso é um problema conhecido, e não um erro dos arquivos desta adoção.
-- Esta adoção **não muda** a restrição `ext-mongodb` nem as demais do `require`.
-- Mesmo com a extensão ignorada, a suíte de testes só passa depois da fase do framework 2: o `^0.3.1` instala um
-  framework que ainda não tem `Elavora\Api\Framework\Contracts\LogWriter`, e 5 dos 9 testes falham com
-  `Interface "Elavora\Api\Framework\Contracts\LogWriter" not found`. Esse comportamento atual é conhecido e não faz
-  parte desta adoção.
+- A restrição `ext-mongodb` `*` não muda.
+- O código só usa as classes `MongoDB\Driver\*` em `src/MongoLogWriter.php`, e só em `MongoLogWriter::connect()`. Os
+  testes não conectam em servidor MongoDB e não precisam da extensão carregada, então o CI não sobe nenhum serviço.
+- Não use `--ignore-platform-req` nem `pecl install` nos comandos e nos workflows deste repositório: a imagem resolve.
 
 ### Estilo de código (`elavora/code-standards`)
 
@@ -857,10 +873,16 @@ As regras completas estão no `Elavora/.github`: [versionamento](https://github.
   maior número existente. O workflow nunca apaga nem move tag.
 - Só o último PR de uma série de mudanças leva `release`.
 
-**Neste repositório:** a última tag é a legada `v0.2.0`, que conta como a estável `0.2.0`. O PR de adoção do pipeline
-não leva `release` nem label de versão (não é o último PR da série), então o merge gera `0.2.1-beta.1`. O
-`release.yml` novo roda no merge desse mesmo PR, e o `tag_on_merge.yml` antigo já não existe nele, então sai uma
-release só.
+**Neste repositório:** as tags são legadas (`v0.1.0`, `v0.1.1` e `v0.2.0`), e a última é a `v0.2.0`, que conta como a
+estável `0.2.0`. Um único PR faz o upgrade para o `elavora/api-framework` `^2.0` e adota o pipeline. Ele é o último
+PR da série e leva as labels `upgrade` (major) e `release` (estável), então o merge gera a estável **`1.0.0`**
+(`0.2.0` com major). O `release.yml` novo roda no merge desse mesmo PR, e o `tag_on_merge.yml` antigo já não existe
+nele, então sai uma release só.
+
+O PR tem commits separados por assunto: `docs`, `test`, `ci`/`build` (pipeline), `style` (PER-CS), `feat!` (upgrade:
+PHP, framework e `branch-alias`) e as correções do PHPStan. O título é
+`feat!: atualiza para o framework 2 e adota o pipeline central`. Ele reúne os dois assuntos porque o pipeline sozinho
+não teria CI verde (5 dos 9 testes já falham na `main`) e o upgrade sozinho dispararia os workflows antigos.
 
 O Packagist é avisado pelo `release.yml` a cada release, com o secret `PACKAGIST_WEBHOOK_URL`. O pacote só fica
 disponível na versão nova depois dessa notificação.
@@ -875,7 +897,7 @@ como texto ou JSON. Os arquivos `.cjs` não são PHP: o PHPUnit e o `composer li
 | `workflows.test.cjs` | os seis workflows contra os blocos desta página, o formato das referências e as regras gerais |
 | `dependabot.test.cjs` | o `dependabot.yml` exato, as labels, o prefixo dos commits e o grupo do CodeQL |
 | `devcontainer.test.cjs` | o `devcontainer.json` exato e a imagem `8.3-latest` |
-| `estilo.test.cjs` | o `composer.json` (pacote em `require-dev`, restrição, scripts), o stub do PHP-CS-Fixer, os marcadores do `.editorconfig`, o `.gitignore` e o `.gitattributes` |
+| `estilo.test.cjs` | o `composer.json` (`php` `>=8.3`, `elavora/api-framework` `^2.0`, `branch-alias` `1.0-dev`, pacote em `require-dev`, restrição, scripts), o stub do PHP-CS-Fixer, os marcadores do `.editorconfig`, o `.gitignore` e o `.gitattributes` |
 | `phpunit.test.cjs` | o `phpunit.xml` exato (bloco `<source>`, `cacheDirectory`, `failOnWarning`) |
 | `removidos.test.cjs` | os arquivos que não podem existir |
 | `_helpers.cjs` | funções comuns (leitura de arquivos, normalização das referências) |

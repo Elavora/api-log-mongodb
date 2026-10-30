@@ -6,10 +6,20 @@
 [![CodeQL](https://github.com/Elavora/api-log-mongodb/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/Elavora/api-log-mongodb/actions/workflows/codeql.yml)
 [![License](https://img.shields.io/packagist/l/elavora/api-log-mongodb.svg?style=flat-square)](LICENSE)
 
-Pacote opcional de logs em MongoDB para o framework Elavora.
+Pacote opcional de logs em MongoDB para o framework Elavora 2
+(`elavora/api-framework` `^2.0`, PHP `>=8.3`).
+
 Ele registra `Elavora\Api\Framework\Logging\Logger` pronto para uso e o contrato local
-`Elavora\Api\Extension\LogMongoDb\Contracts\LogWriter`, que recebe documentos de log
-prontos e os grava na colecao configurada.
+`Elavora\Api\Extension\LogMongoDb\Contracts\LogWriter`, que recebe documentos de log prontos e os grava na coleção
+configurada.
+
+## Uso pelo ambiente
+
+Com o bootstrap do framework 2, basta instalar o pacote e definir `LOG_DRIVER=mongodb`. As variáveis
+`MONGO_LOG_URI`, `MONGO_LOG_HOST`, `MONGO_LOG_PORT`, `MONGO_LOG_DATABASE`, `MONGO_LOG_COLLECTION`,
+`MONGO_LOG_USERNAME` e `MONGO_LOG_PASSWORD` são opcionais (veja os padrões em [docs/USO.md](docs/USO.md)).
+
+## Registro manual
 
 ```php
 use Elavora\Api\Extension\LogMongoDb\MongoLogExtension;
@@ -23,11 +33,11 @@ $application->extend(new MongoLogExtension([
 
 $application->container()
     ->get(Logger::class)
-    ->info('Requisicao recebida', ['route' => '/health']);
+    ->info('Requisição recebida', ['route' => '/health']);
 ```
 
-Tambem podem ser informados `host`, `port`, `username` e `password` no lugar
-de `uri`. A porta padrao e `27017` e a colecao padrao e `logs`.
+Também podem ser informados `host`, `port`, `username` e `password` no lugar de `uri`. A porta padrão é `27017` e a
+coleção padrão é `logs`. O banco (`database`) é obrigatório.
 
 O documento gravado segue o formato legado:
 
@@ -35,26 +45,19 @@ O documento gravado segue o formato legado:
 [
     'timestamp' => gmdate('c'),
     'level' => 'info',
-    'message' => 'Requisicao recebida',
+    'message' => 'Requisição recebida',
     'request_id' => '...',
     'context' => [],
 ]
 ```
 
-## Compatibilidade
+Os valores produzidos por `Settings::getSettingsMongo()` podem ser passados direto a `MongoLogConfig::fromArray()`. O
+valor legado de `BFR_API_LOG_COLLECTION` corresponde à opção `collection` da extensão.
 
-| API existente | Comportamento preservado no pacote |
-| --- | --- |
-| `Elavora\Api\Integration\Database\MongoDatabase` | Configuracao aceita `uri` ou `host`, `port`, `username`, `password` e `database`; a escrita continua sendo um documento em uma colecao MongoDB. |
-| `Elavora\Api\Core\Logger` | `Elavora\Api\Framework\Logging\Logger` gera documento com `timestamp`, `level`, `message`, `request_id` e `context`. |
-| `Elavora\Api\Interface\NoSqlDatabase` | Permanece contrato do runtime legado; este pacote nao o substitui nem exige alteracao nele. |
+O framework não tem logger central no core. Este pacote é opcional: instale e registre somente quando a aplicação
+precisar gravar logs em MongoDB. Registre só um destino de log por aplicação.
 
-Os valores produzidos por `Settings::getSettingsMongo()` podem ser passados
-diretamente a `MongoLogConfig::fromArray()`. O valor legado de
-`BFR_API_LOG_COLLECTION` corresponde a opcao `collection` da extensao.
-
-O framework modular nao possui logger central no core. Este pacote e opcional:
-instale e registre somente quando a aplicacao precisar gravar logs em MongoDB.
+Especificação completa, exemplos e regras de configuração: [docs/USO.md](docs/USO.md).
 
 ## Instalação
 
@@ -62,20 +65,22 @@ instale e registre somente quando a aplicacao precisar gravar logs em MongoDB.
 composer require elavora/api-log-mongodb
 ```
 
-Requisitos: PHP 8.1 ou superior, a extensão PHP `mongodb` e `elavora/api-framework` `^0.3.1`.
+Requisitos: PHP 8.3 ou superior, a extensão PHP `mongodb` e `elavora/api-framework` `^2.0`.
+
+Versão `1.0`: atualiza o pacote para o `elavora/api-framework` 2.0, que substitui o `^0.3.1`, e sobe o PHP mínimo de
+8.1 para 8.3. A API do pacote não muda; quem usa o framework `0.x` precisa atualizar junto (veja o
+[guia de migração](docs/USO.md#versão-e-compatibilidade)).
 
 ## Desenvolvimento e testes
 
-Você só precisa de Docker. O ambiente é a imagem `ghcr.io/elavora/php-dev:8.3-latest`: abra o repositório no VS Code
-com **Dev Containers: Reopen in Container**, ou rode no PowerShell. A imagem não tem a extensão `mongodb`, então o
-comando instala a extensão antes (precisa de `-u root`; a instalação leva alguns minutos):
+Você só precisa de Docker. O ambiente é a imagem `ghcr.io/elavora/php-dev:8.3-latest`, que já traz a extensão
+`mongodb`: abra o repositório no VS Code com **Dev Containers: Reopen in Container**, ou rode no PowerShell:
 
 ```powershell
-docker run --rm -u root --mount "type=bind,source=$($PWD.Path),target=/workspace" -w /workspace ghcr.io/elavora/php-dev:8.3-latest sh -lc 'pecl install mongodb && docker-php-ext-enable mongodb && git config --global --add safe.directory /workspace && COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --prefer-dist && composer check'
+docker run --rm --mount "type=bind,source=$($PWD.Path),target=/workspace" -w /workspace ghcr.io/elavora/php-dev:8.3-latest sh -lc 'git config --global --add safe.directory /workspace && composer install --no-interaction --prefer-dist && composer check'
 ```
 
-Alternativa sem compilar a extensão (basta para os testes): `composer install --ignore-platform-req=ext-mongodb`. Veja
-[Extensão mongodb](docs/DESENVOLVIMENTO.md#extensão-mongodb).
+Os testes não precisam de servidor MongoDB. Veja [Extensão mongodb](docs/DESENVOLVIMENTO.md#extensão-mongodb).
 
 Scripts do Composer:
 
@@ -98,17 +103,17 @@ estão em [Desenvolvimento e testes](docs/DESENVOLVIMENTO.md).
 3. Rode `composer check` antes de abrir o PR.
 4. Abra o PR para a `main`, preencha o template e aplique as labels que definem a versão
    ([Versões e release](docs/AUTOMACAO.md#versões-e-release)).
-5. Confira o comentário do pipeline de qualidade no PR. Ele não bloqueia o merge, mas quem revisa olha o resultado.
+5. Confira o comentário do pipeline de qualidade no PR. O PR só é integrado com todos os checks verdes.
 
 ## Versões
 
 Cada PR integrado na `main` gera uma versão automaticamente, conforme as labels do PR: sem a label `release` sai uma
-beta (`0.3.0-beta.1`), com ela sai a estável (`0.3.0`). As tags novas não têm o prefixo `v`, e as notas de cada
+beta (`1.0.1-beta.1`), com ela sai a estável (`1.0.1`). As tags novas não têm o prefixo `v`, e as notas de cada
 GitHub Release são geradas em português a partir dos PRs. Veja [Versões e release](docs/AUTOMACAO.md#versões-e-release).
 
 ## Documentação
 
-1. [Guia de uso](docs/USO.md): a especificação do pacote, com a API pública e exemplos.
+1. [Guia de uso](docs/USO.md): a especificação do pacote, com a API pública, a configuração e a migração.
 2. [Desenvolvimento e testes](docs/DESENVOLVIMENTO.md): ambiente, como rodar os testes e o que roda no CI.
 3. [Automação do repositório](docs/AUTOMACAO.md): workflows, Dependabot, estilo de código, labels e versões.
 

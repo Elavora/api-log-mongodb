@@ -19,30 +19,18 @@ docker run --rm --mount "type=bind,source=$($PWD.Path),target=/workspace" -w /wo
 Esse comando cria `vendor/` e `composer.lock` na pasta (os dois estão no `.gitignore`) e pode atualizar o
 `.editorconfig`.
 
-**Neste pacote o comando acima falha** no `composer install`, porque a imagem não tem a extensão `mongodb`. Veja
-[Extensão mongodb](#extensão-mongodb).
-
 ## Extensão mongodb
 
-O pacote exige `ext-mongodb`, e a imagem `php-dev` não a traz. Duas saídas, as duas só no container:
+O pacote exige `ext-mongodb`, e a imagem `ghcr.io/elavora/php-dev:8.3-latest` (a partir da 0.4.0) já a traz. Por isso
+o `composer install`, o `composer test` e o `composer check` funcionam no devcontainer, no comando acima e no CI sem
+instalar nada nem usar `--ignore-platform-req`.
 
-1. **Instalar a extensão** (recomendado, é o ambiente real). O `pecl` só escreve como root, então o container roda com
-   `-u root`. No PowerShell, na pasta do repositório (leva alguns minutos, porque compila a extensão):
+Nenhum teste precisa de servidor MongoDB. As URIs `mongodb://mongo:27017` dos testes são só texto de configuração, e o
+writer é testado com uma função de inserção própria; `MongoLogWriter::connect()` (o único caminho que cria um
+`MongoDB\Driver\Manager`) não é chamado. Por isso não há teste para pular por falta de servidor, e os testes passam
+também sem a extensão carregada.
 
-   ```powershell
-   docker run --rm -u root -v "$($PWD.Path):/origem:ro" ghcr.io/elavora/php-dev:8.3-latest sh -lc 'pecl install mongodb && docker-php-ext-enable mongodb && git config --global --add safe.directory "*" && git clone -q /origem /tmp/repo && cd /tmp/repo && COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --prefer-dist && composer check'
-   ```
-
-2. **Ignorar o requisito só para rodar os testes**, sem instalar a extensão: acrescente
-   `--ignore-platform-req=ext-mongodb` ao `composer install`. Os testes não carregam o driver.
-
-No VS Code, dentro do devcontainer, a extensão não existe, e o `postCreateCommand` (`composer install`) falha por isso.
-Rode `sudo pecl install mongodb && sudo docker-php-ext-enable mongodb` (o `sudo` não pede senha) e depois o
-`composer install`; ou use o `composer install --ignore-platform-req=ext-mongodb`.
-
-Até a fase do framework 2, `composer test` falha em 5 dos 9 testes (`Interface "Elavora\Api\Framework\Contracts\LogWriter"
-not found`), porque o `^0.3.1` instala um framework sem esse contrato. No CI, a instalação também falha pela extensão
-([detalhes](AUTOMACAO.md#extensão-mongodb)).
+Fora da imagem, instale a extensão `mongodb` (sem ela o `composer install` falha por causa do `ext-mongodb`).
 
 ## Scripts do Composer
 
@@ -65,9 +53,6 @@ docker run --rm -v "$($PWD.Path):/origem:ro" -e XDEBUG_MODE=coverage ghcr.io/ela
 
 Tudo precisa sair com código 0, e o aviso `No filter is configured` não pode aparecer. O comando não deixa nada na
 sua pasta.
-
-Neste pacote, use o comando da seção [Extensão mongodb](#extensão-mongodb) no lugar deste: ele já traz a extensão e roda
-`composer check`. Para acrescentar a cobertura, junte `XDEBUG_MODE=coverage` e `composer test -- --coverage-clover=/tmp/clover.xml`.
 
 Para só formatar ou conferir o estilo, dentro do container: `php-cs-fixer fix` e `php-cs-fixer check`.
 
@@ -94,7 +79,7 @@ Em cada PR e em cada push na `main`:
 
 - Em PR de fork, PR do Dependabot e push na `main`, a formatação não commita: só avisa.
 - Depois que o CI commitar na sua branch, dê `git pull` antes do próximo push.
-- **Nenhum check trava o merge.** Quem revisa olha o resultado e decide.
+- O PR só é integrado com todos os checks verdes. Esta adoção não altera a proteção da `main`.
 - Os testes PHPUnit rodam dentro do workflow **Qualidade**, na imagem do pipeline central.
 
 ## Commits, PRs e versões
@@ -104,6 +89,10 @@ e por PR. A descrição do PR segue o template da organização.
 
 As labels do PR definem a versão que sai no merge, e a label `release` publica a estável. Veja
 [Versões e release](AUTOMACAO.md#versões-e-release).
+
+Exceção desta adoção: o upgrade para o `elavora/api-framework` `^2.0` (PHP `>=8.3`) e o pipeline central vão num único
+PR, com commits separados por assunto, e as labels `upgrade` e `release` (sai a `1.0.0`). O motivo é que 5 dos 9 testes
+já falham na `main` com o framework `0.x`.
 
 ---
 
