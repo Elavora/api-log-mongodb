@@ -26,7 +26,7 @@ final class FrameworkLogWriterContractTest extends TestCase
                 'uri' => 'mongodb://mongo:27017',
                 'database' => 'api_logs',
             ],
-            static fn (MongoLogConfig $config): LogWriter => $fakeWriter
+            static fn(MongoLogConfig $config): LogWriter => $fakeWriter,
         ));
 
         $writer = $application->container()->get(FrameworkLogWriter::class);
@@ -39,21 +39,19 @@ final class FrameworkLogWriterContractTest extends TestCase
     public function testReusesSameWriterInstanceForLocalAndFrameworkContracts(): void
     {
         $fakeWriter = new class implements LogWriter {
-            public function write(array $entry): void
-            {
-            }
+            public function write(array $entry): void {}
         };
         $application = Application::create()->extend(new MongoLogExtension(
             [
                 'uri' => 'mongodb://mongo:27017',
                 'database' => 'api_logs',
             ],
-            static fn (MongoLogConfig $config): LogWriter => $fakeWriter
+            static fn(MongoLogConfig $config): LogWriter => $fakeWriter,
         ));
 
         self::assertSame(
             $application->container()->get(LogWriter::class),
-            $application->container()->get(FrameworkLogWriter::class)
+            $application->container()->get(FrameworkLogWriter::class),
         );
     }
 }
