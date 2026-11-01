@@ -11,9 +11,8 @@ final class MongoLogConfig
     private function __construct(
         private readonly string $uri,
         private readonly string $database,
-        private readonly string $collection
-    ) {
-    }
+        private readonly string $collection,
+    ) {}
 
     /**
      * Cria a configuracao a partir de array.
@@ -32,7 +31,7 @@ final class MongoLogConfig
         return new self(
             uri: self::buildUri($config),
             database: $database,
-            collection: $collection
+            collection: $collection,
         );
     }
 
@@ -68,6 +67,9 @@ final class MongoLogConfig
         return "{$this->database}.{$this->collection}";
     }
 
+    /**
+     * @param array<string, mixed> $config
+     */
     private static function buildUri(array $config): string
     {
         $uri = self::optionalString($config['uri'] ?? null);
