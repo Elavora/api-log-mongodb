@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/packagist/l/elavora/api-log-mongodb.svg?style=flat-square)](LICENSE)
 
 Pacote opcional de logs em MongoDB para o framework Elavora 2
-(`elavora/api-framework` `^3.0`, PHP `>=8.3`).
+(`elavora/api-framework` `^4.1`, PHP `>=8.4`).
 
 Ele registra `Elavora\Api\Framework\Logging\Logger` pronto para uso e o contrato local
 `Elavora\Api\Extension\LogMongoDb\Contracts\LogWriter`, que recebe documentos de log prontos e os grava na coleção
@@ -65,7 +65,7 @@ Especificação completa, exemplos e regras de configuração: [docs/USO.md](doc
 composer require elavora/api-log-mongodb
 ```
 
-Requisitos: PHP 8.3 ou superior, a extensão PHP `mongodb` e `elavora/api-framework` `^3.0`.
+Requisitos: PHP 8.4 ou superior, a extensão PHP `mongodb` e `elavora/api-framework` `^4.1`.
 
 Versão `1.0`: atualiza o pacote para o `elavora/api-framework` 2.0, que substitui o `^0.3.1`, e sobe o PHP mínimo de
 8.1 para 8.3. A API do pacote não muda; quem usa o framework `0.x` precisa atualizar junto (veja o
@@ -73,11 +73,11 @@ Versão `1.0`: atualiza o pacote para o `elavora/api-framework` 2.0, que substit
 
 ## Desenvolvimento e testes
 
-Você só precisa de Docker. O ambiente é a imagem `ghcr.io/elavora/php-dev:8.3-latest`, que já traz a extensão
+Você só precisa de Docker. O ambiente é a imagem `ghcr.io/elavora/php-dev:8.4-latest`, que já traz a extensão
 `mongodb`: abra o repositório no VS Code com **Dev Containers: Reopen in Container**, ou rode no PowerShell:
 
 ```powershell
-docker run --rm --mount "type=bind,source=$($PWD.Path),target=/workspace" -w /workspace ghcr.io/elavora/php-dev:8.3-latest sh -lc 'git config --global --add safe.directory /workspace && composer install --no-interaction --prefer-dist && composer check'
+docker run --rm --mount "type=bind,source=$($PWD.Path),target=/workspace" -w /workspace ghcr.io/elavora/php-dev:8.4-latest sh -lc 'git config --global --add safe.directory /workspace && composer install --no-interaction --prefer-dist && composer check'
 ```
 
 Os testes não precisam de servidor MongoDB. Veja [Extensão mongodb](docs/DESENVOLVIMENTO.md#extensão-mongodb).

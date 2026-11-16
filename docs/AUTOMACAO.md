@@ -76,8 +76,8 @@ Estas ações acontecem no GitHub e não têm teste:
 
 Nesta seção:
 
-- **imagem** é `ghcr.io/elavora/php-dev:8.3-latest`, a tag que aponta sempre para a versão estável mais recente da
-  imagem PHP 8.3 (só muda quando sai uma release estável do `Elavora/devcontainers`);
+- **imagem** é `ghcr.io/elavora/php-dev:8.4-latest`, a tag que aponta sempre para a versão estável mais recente da
+  imagem PHP 8.4 (só muda quando sai uma release estável do `Elavora/devcontainers`);
 - os SHAs e as versões dos exemplos são os da adoção. O Dependabot troca esses valores, e os testes aceitam a troca
   (ver [Atualizações do Dependabot não quebram os testes](#atualizações-do-dependabot-não-quebram-os-testes)).
 
@@ -359,7 +359,7 @@ updates:
 
 - `composer` atualiza `phpstan/phpstan`, `phpunit/phpunit` e `elavora/code-standards`. `github-actions` atualiza as
   actions de terceiros e os workflows do `Elavora/.github` (o SHA e o comentário de versão).
-- Só existem essas duas entradas. Não há entrada para imagem: o devcontainer usa a `8.3-latest`, e o CI usa o padrão
+- Só existem essas duas entradas. Não há entrada para imagem: o devcontainer usa a `8.4-latest`, e o CI usa o padrão
   do pipeline central, que muda junto com o SHA do `.github`.
 - `labels: ["dependencies"]` evita que o Dependabot crie as labels `php` e `github_actions`, que a sincronização
   apagaria toda semana. `dependencies` está no catálogo e vale patch.
@@ -375,8 +375,8 @@ Conteúdo exato:
 
 ```json
 {
-  "name": "Elavora PHP 8.3",
-  "image": "ghcr.io/elavora/php-dev:8.3-latest",
+  "name": "Elavora PHP 8.4",
+  "image": "ghcr.io/elavora/php-dev:8.4-latest",
   "remoteUser": "vscode",
   "postCreateCommand": "git config --global --add safe.directory \"$(pwd)\" && composer install --no-interaction --prefer-dist",
   "customizations": {
@@ -403,21 +403,21 @@ Conteúdo exato:
 }
 ```
 
-- `image` é exatamente `ghcr.io/elavora/php-dev:8.3-latest`: nunca uma versão fixa (`8.3-X.Y.Z`), outra tag móvel
-  (`8.3`, `latest`) nem o nome local `elavora/php-dev:8.3`.
+- `image` é exatamente `ghcr.io/elavora/php-dev:8.4-latest`: nunca uma versão fixa (`8.4-X.Y.Z`), outra tag móvel
+  (`8.4`, `latest`) nem o nome local `elavora/php-dev:8.4`.
 - O arquivo é JSON válido, sem comentários. O código PHP é formatado ao salvar.
 
 ### `composer.json`
 
 O arquivo é formatado com **2 espaços** de indentação (regra do `.editorconfig` para `*.json`), sem espaços duplos
-depois de `:` e sem sequências `\uXXXX` (por exemplo, `">=8.3"`, e não `">=8.3"`). O arquivo de hoje tem espaços
+depois de `:` e sem sequências `\uXXXX` (por exemplo, `">=8.4"`, e não `">=8.4"`). O arquivo de hoje tem espaços
 duplos e escapes: o PR passa a gravar sem eles. Depois do PR, ele tem:
 
 ```json
 {
   "name": "elavora/<repo>",
   "require": {
-    "php": ">=8.3",
+    "php": ">=8.4",
     "ext-mongodb": "*",
     "elavora/api-framework": "^2.0"
   },
@@ -455,7 +455,7 @@ continuam como estão, na ordem atual.
 - **Este PR também é o upgrade para o framework 2.** Antes, `php` era `>=8.1` e `elavora/api-framework` era `^0.3.1`.
   Agora `php` é `>=8.3` (o que o framework 2 exige) e `elavora/api-framework` é `^2.0`. Não existe `^0.3`, `^1.0`
   nem uma união como `^1.0 || ^2.0` em `require`.
-- `ext-mongodb` continua em `require` (`*`), sem mudança. A imagem `ghcr.io/elavora/php-dev:8.3-latest` (a partir da
+- `ext-mongodb` continua em `require` (`*`), sem mudança. A imagem `ghcr.io/elavora/php-dev:8.4-latest` (a partir da
   0.4.0) já traz a extensão `mongodb`, então o `composer install` e os testes rodam no CI sem instalar nada
   ([Desenvolvimento e testes](DESENVOLVIMENTO.md#extensão-mongodb)). Nenhum teste precisa de servidor MongoDB.
 - `extra.branch-alias`: `dev-main` passa de `0.1-dev` para `1.0-dev`, o major que o merge publica
@@ -545,7 +545,7 @@ passando. Com o bloco, o comando de cobertura cumpre três condições:
 
 ### Extensão `mongodb`
 
-O pacote exige `ext-mongodb` (`require`), e a imagem `ghcr.io/elavora/php-dev:8.3-latest` (a partir da 0.4.0) **já traz**
+O pacote exige `ext-mongodb` (`require`), e a imagem `ghcr.io/elavora/php-dev:8.4-latest` (a partir da 0.4.0) **já traz**
 essa extensão. O `composer install` do pipeline central (`composer install --no-progress --prefer-dist`, sem ignorar
 requisitos de plataforma) passa sem instalar nada, e o chamador não precisa de bloco `with`.
 
@@ -896,8 +896,8 @@ como texto ou JSON. Os arquivos `.cjs` não são PHP: o PHPUnit e o `composer li
 | --- | --- |
 | `workflows.test.cjs` | os seis workflows contra os blocos desta página, o formato das referências e as regras gerais |
 | `dependabot.test.cjs` | o `dependabot.yml` exato, as labels, o prefixo dos commits e o grupo do CodeQL |
-| `devcontainer.test.cjs` | o `devcontainer.json` exato e a imagem `8.3-latest` |
-| `estilo.test.cjs` | o `composer.json` (`php` `>=8.3`, `elavora/api-framework` `^2.0`, `branch-alias` `1.0-dev`, pacote em `require-dev`, restrição, scripts), o stub do PHP-CS-Fixer, os marcadores do `.editorconfig`, o `.gitignore` e o `.gitattributes` |
+| `devcontainer.test.cjs` | o `devcontainer.json` exato e a imagem `8.4-latest` |
+| `estilo.test.cjs` | o `composer.json` (`php` `>=8.4`, `elavora/api-framework` `^2.0`, `branch-alias` `1.0-dev`, pacote em `require-dev`, restrição, scripts), o stub do PHP-CS-Fixer, os marcadores do `.editorconfig`, o `.gitignore` e o `.gitattributes` |
 | `phpunit.test.cjs` | o `phpunit.xml` exato (bloco `<source>`, `cacheDirectory`, `failOnWarning`) |
 | `removidos.test.cjs` | os arquivos que não podem existir |
 | `_helpers.cjs` | funções comuns (leitura de arquivos, normalização das referências) |

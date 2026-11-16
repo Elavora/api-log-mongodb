@@ -15,12 +15,12 @@ composer require elavora/api-log-mongodb
 
 | Dependência             | Versão  |
 |-------------------------|---------|
-| `php`                   | `>=8.3` |
+| `php`                   | `>=8.4` |
 | `ext-mongodb`           | `*`     |
 | `elavora/api-framework` | `^2.0`  |
 
 O pacote não aceita mais o framework `0.x` nem o `1.x`. A versão mínima do PHP acompanha o framework 2, que exige
-PHP 8.3.
+PHP 8.4.
 
 A extensão `mongodb` só é carregada de fato quando o pacote grava num servidor (`MongoLogWriter::connect()`). Os testes
 do pacote não conectam em nenhum servidor MongoDB e não precisam da extensão carregada para rodar. O `composer install`,
@@ -253,7 +253,7 @@ projeto e rode `composer update elavora/api-framework elavora/api-log-mongodb`:
 ```json
 {
   "require": {
-    "php": ">=8.3",
+    "php": ">=8.4",
     "elavora/api-framework": "^2.0",
     "elavora/api-log-mongodb": "^1.0"
   }
@@ -287,12 +287,12 @@ de `BFR_API_LOG_COLLECTION` corresponde à opção `collection`.
 
 ## Validação local
 
-Os testes rodam no container `ghcr.io/elavora/php-dev:8.3-latest`. Essa imagem (a partir da 0.4.0) já traz a extensão
+Os testes rodam no container `ghcr.io/elavora/php-dev:8.4-latest`. Essa imagem (a partir da 0.4.0) já traz a extensão
 `mongodb`, então não é preciso instalar nada. Rode no PowerShell, na raiz do repo, depois de commitar (o clone pega só
 o que está commitado):
 
 ```powershell
-docker run --rm -v "$($PWD.Path):/origem:ro" ghcr.io/elavora/php-dev:8.3-latest sh -lc 'git config --global --add safe.directory "*" && git clone -q /origem /tmp/repo && cd /tmp/repo && composer install --no-interaction --prefer-dist && composer validate --strict --no-check-publish && composer test'
+docker run --rm -v "$($PWD.Path):/origem:ro" ghcr.io/elavora/php-dev:8.4-latest sh -lc 'git config --global --add safe.directory "*" && git clone -q /origem /tmp/repo && cd /tmp/repo && composer install --no-interaction --prefer-dist && composer validate --strict --no-check-publish && composer test'
 ```
 
 O comando clona `/origem` em `/tmp/repo` (para não gravar `vendor/` no seu repositório), instala as dependências,
