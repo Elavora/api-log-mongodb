@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/packagist/l/elavora/api-log-mongodb.svg?style=flat-square)](LICENSE)
 
 Pacote opcional de logs em MongoDB para o framework Elavora 2
-(`elavora/api-framework` `^4.1`, PHP `>=8.4`).
+(`elavora/api-framework` `^4.1 || ^5.0 || ^6.0`, PHP `>=8.4`).
 
 Ele registra `Elavora\Api\Framework\Logging\Logger` pronto para uso e o contrato local
 `Elavora\Api\Extension\LogMongoDb\Contracts\LogWriter`, que recebe documentos de log prontos e os grava na coleção
@@ -65,7 +65,7 @@ Especificação completa, exemplos e regras de configuração: [docs/USO.md](doc
 composer require elavora/api-log-mongodb
 ```
 
-Requisitos: PHP 8.4 ou superior, a extensão PHP `mongodb` e `elavora/api-framework` `^4.1`.
+Requisitos: PHP 8.4 ou superior, a extensão PHP `mongodb` e `elavora/api-framework` `^4.1 || ^5.0 || ^6.0`.
 
 Versão `1.0`: atualiza o pacote para o `elavora/api-framework` 2.0, que substitui o `^0.3.1`, e sobe o PHP mínimo de
 8.1 para 8.3. A API do pacote não muda; quem usa o framework `0.x` precisa atualizar junto (veja o
