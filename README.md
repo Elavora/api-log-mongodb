@@ -17,7 +17,8 @@ configurada.
 
 Com o bootstrap do framework 2, basta instalar o pacote e definir `LOG_DRIVER=mongodb`. As variáveis
 `MONGO_LOG_URI`, `MONGO_LOG_HOST`, `MONGO_LOG_PORT`, `MONGO_LOG_DATABASE`, `MONGO_LOG_COLLECTION`,
-`MONGO_LOG_USERNAME` e `MONGO_LOG_PASSWORD` são opcionais (veja os padrões em [docs/USO.md](docs/USO.md)).
+`MONGO_LOG_USERNAME`, `MONGO_LOG_PASSWORD`, `MONGO_LOG_TIMEOUT_MS` (padrão `1000`) e `MONGO_LOG_FAIL_SILENTLY` (padrão
+`true`) são opcionais (veja os padrões em [docs/USO.md](docs/USO.md)).
 
 ## Registro manual
 
@@ -50,6 +51,11 @@ O documento gravado segue o formato legado:
     'context' => [],
 ]
 ```
+
+Além disso, o writer grava `created_at` (tipo Date do MongoDB), para permitir retenção por índice TTL:
+`db.logs.createIndex({created_at:1},{expireAfterSeconds: 2592000})` (coleção capped não aceita TTL). Falhas do MongoDB
+não derrubam a requisição: são registradas uma vez em `error_log` e o log é descartado, com timeouts de 1 s por padrão
+(veja [Resiliência e timeouts](docs/USO.md#resiliência-e-timeouts)).
 
 Os valores produzidos por `Settings::getSettingsMongo()` podem ser passados direto a `MongoLogConfig::fromArray()`. O
 valor legado de `BFR_API_LOG_COLLECTION` corresponde à opção `collection` da extensão.

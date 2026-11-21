@@ -6,6 +6,7 @@ use Elavora\Api\Extension\LogMongoDb\Contracts\LogWriter;
 use Elavora\Api\Extension\LogMongoDb\MongoLogConfig;
 use Elavora\Api\Extension\LogMongoDb\MongoLogWriter;
 use Elavora\Api\Framework\Contracts\LogWriter as FrameworkLogWriter;
+use MongoDB\BSON\UTCDateTime;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -40,6 +41,8 @@ final class MongoLogWriterTest extends TestCase
         $writer->write($entry);
 
         self::assertSame('api_logs.application_logs', $namespace);
+        self::assertInstanceOf(UTCDateTime::class, $persistedEntry['created_at']);
+        unset($persistedEntry['created_at']);
         self::assertSame($entry, $persistedEntry);
     }
 
@@ -53,7 +56,7 @@ final class MongoLogWriterTest extends TestCase
         self::assertSame(['api_logs.logs'], $namespaces);
     }
 
-    public function testDoesNotAddRemoveOrRenameFields(): void
+    public function testOnlyAddsCreatedAtAndKeepsOtherFieldsUntouched(): void
     {
         $namespaces = [];
         $entry = [
@@ -69,8 +72,10 @@ final class MongoLogWriterTest extends TestCase
 
         $writer->write($entry);
 
+        self::assertSame(array_keys($entry), array_slice(array_keys($documents[0]), 0, count($entry)));
+        self::assertSame(['created_at'], array_slice(array_keys($documents[0]), count($entry)));
+        unset($documents[0]['created_at']);
         self::assertSame([$entry], $documents);
-        self::assertSame(array_keys($entry), array_keys($documents[0]));
     }
 
     public function testAcceptsArbitraryEntryWithoutValidatingFields(): void
@@ -81,7 +86,7 @@ final class MongoLogWriterTest extends TestCase
         $writer->write([]);
         $writer->write(['qualquer' => 'coisa']);
 
-        self::assertSame([[], ['qualquer' => 'coisa']], $documents);
+        self::assertSame([['created_at'], ['qualquer', 'created_at']], array_map('array_keys', $documents));
     }
 
     public function testCallsInsertOncePerWriteInOrder(): void
@@ -93,7 +98,7 @@ final class MongoLogWriterTest extends TestCase
         $writer->write(['n' => 2]);
         $writer->write(['n' => 3]);
 
-        self::assertSame([['n' => 1], ['n' => 2], ['n' => 3]], $documents);
+        self::assertSame([1, 2, 3], array_column($documents, 'n'));
         self::assertCount(3, $namespaces);
     }
 

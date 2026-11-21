@@ -42,6 +42,10 @@ final class MongoLogConfig
     public function database(): string;
     public function collection(): string;
     public function collectionNamespace(): string;
+    public function timeoutMs(): int;
+    public function failSilently(): bool;
+    /** @return array<string, int> */
+    public function driverOptions(): array;
 }
 ```
 
@@ -53,25 +57,36 @@ O construtor é privado: use `fromArray()`. O objeto é imutável.
 | `database()`            | o banco onde os logs são gravados                            |
 | `collection()`          | a coleção (`logs` quando não informada)                      |
 | `collectionNamespace()` | `database.collection`, por exemplo `api_logs.application_logs` |
+| `timeoutMs()`           | o timeout de seleção de servidor e de conexão, em ms (padrão `1000`) |
+| `failSilently()`        | `true` (padrão) quando falhas do MongoDB não podem derrubar a requisição |
+| `driverOptions()`       | as opções de URI passadas ao driver: `serverSelectionTimeoutMS`, `connectTimeoutMS` e `socketTimeoutMS` (o dobro do timeout), exceto as que a própria URI já define |
 
 ### `MongoLogWriter`
 
 ```php
 final class MongoLogWriter implements \Elavora\Api\Extension\LogMongoDb\Contracts\LogWriter
 {
-    public function __construct(MongoLogConfig $config, callable $insertDocument);
+    public function __construct(MongoLogConfig $config, callable $insertDocument, ?callable $reportError = null);
     public static function connect(MongoLogConfig $config): self;
     /** @param array<string, mixed> $entry */
     public function write(array $entry): void;
 }
 ```
 
-- `write($entry)` chama `$insertDocument($config->collectionNamespace(), $entry)`. O documento vai exatamente como
-  recebido, sem acrescentar, remover nem renomear campos.
+- `write($entry)` chama `$insertDocument($config->collectionNamespace(), $documento)`. O documento é a entrada como
+  recebida, sem remover nem renomear campos, mais o campo `created_at` (veja [Documento gravado](#documento-gravado)).
+  Uma entrada que já traz `created_at` é gravada como está.
+- Resiliência: com `fail_silently` verdadeiro (padrão), qualquer `Throwable` lançado pelo `$insertDocument` (falha de
+  conexão, timeout, erro de escrita) é capturado. A primeira falha de cada writer vai para `error_log` (só a classe da
+  exceção, porque a mensagem do driver pode conter a URI com credenciais), as demais não repetem o aviso, e as
+  gravações dos 5 segundos seguintes são descartadas sem tentar o MongoDB, para não somar timeouts numa requisição com
+  vários logs. Com `fail_silently` falso, a exceção sobe. `$reportError` (`function (string $mensagem): void`)
+  substitui o `error_log`.
 - `$insertDocument` tem a forma `function (string $namespace, array $entry): void`. Os testes passam uma função própria
   e por isso não precisam de servidor.
-- `connect($config)` devolve um writer que cria um `MongoDB\Driver\Manager` com `$config->uri()` e grava cada entrada
-  com `MongoDB\Driver\BulkWrite::insert()` e `WriteConcern::MAJORITY` com tempo limite de 1000 ms. Esse é o único
+- `connect($config)` devolve um writer que cria, na primeira gravação, um `MongoDB\Driver\Manager` com `$config->uri()`
+  e `$config->driverOptions()` (a criação também fica protegida pela resiliência) e grava cada entrada
+  com `MongoDB\Driver\BulkWrite::insert()` e `WriteConcern::MAJORITY` com tempo limite de `timeoutMs()` (1000 ms por padrão). Esse é o único
   caminho que usa o driver e o servidor. Sem a extensão `mongodb` carregada, lança `RuntimeException` com a
   mensagem `A extensao PHP mongodb nao esta disponivel.`.
 
@@ -125,6 +140,8 @@ final class MongoLogExtension implements \Elavora\Api\Framework\Contracts\Extens
 | `port`       | `int\|string` | `27017` | porta, usada só quando a URI é montada                       |
 | `username`   | `string` | —       | usuário, usado só quando a URI é montada                         |
 | `password`   | `string` | —       | senha, usada só quando a URI é montada                           |
+| `timeout_ms` | `int|string` | `1000` | timeout (ms) de seleção de servidor e de conexão; vale `MONGO_LOG_TIMEOUT_MS` se a chave não existir |
+| `fail_silently` | `bool|string` | `true` | `false` faz a exceção do MongoDB subir; vale `MONGO_LOG_FAIL_SILENTLY` se a chave não existir |
 
 ### Normalização
 
@@ -134,6 +151,12 @@ final class MongoLogExtension implements \Elavora\Api\Framework\Contracts\Extens
 - `port`: um inteiro maior que zero vira o texto desse número (`27018` vira `'27018'`); uma `string` não vazia é usada
   como está depois do `trim()` (`' 27018 '` vira `'27018'`; o texto não é validado como número); qualquer outra
   coisa (ausente, `0`, negativo, `null`) vira `'27017'`.
+- `timeout_ms`: inteiro maior que zero (ou texto só com dígitos); qualquer outra coisa vira `1000`.
+- `fail_silently`: booleano, ou texto/inteiro lido como booleano (`true`, `1`, `on`, `yes` / `false`, `0`, `off`, `no`);
+  qualquer outra coisa vira `true`.
+- Quando `timeout_ms` ou `fail_silently` não estão no array, o pacote lê `MONGO_LOG_TIMEOUT_MS` e
+  `MONGO_LOG_FAIL_SILENTLY` do ambiente. Assim o bootstrap do framework, que só repassa as variáveis de conexão, já
+  funciona com elas.
 - Chaves desconhecidas em `$config` são ignoradas.
 
 ### Como a URI é montada
@@ -166,7 +189,7 @@ O banco é conferido antes do host: sem nenhum dos dois, a mensagem é a do banc
 
 ## Documento gravado
 
-O `Logger` do framework 2 monta a entrada e a passa para o writer, que a grava sem mudar nada:
+O `Logger` do framework 2 monta a entrada e a passa para o writer, que a grava como veio, acrescentando `created_at`:
 
 ```php
 [
@@ -175,8 +198,33 @@ O `Logger` do framework 2 monta a entrada e a passa para o writer, que a grava s
     'message' => 'Requisicao recebida',
     'request_id' => '...',
     'context' => ['route' => '/health'],
+    'created_at' => new MongoDB\BSON\UTCDateTime(),   // acrescentado pelo writer
 ]
 ```
+
+`timestamp` continua texto ISO, por compatibilidade. `created_at` é um `UTCDateTime` (tipo Date do MongoDB) calculado
+a partir do `timestamp` (ou do instante atual, se ele faltar ou for ilegível). Sem a extensão `mongodb` carregada
+(só nos testes), o campo não é acrescentado.
+
+### Retenção por TTL
+
+O MongoDB só expira documentos por um campo Date, por isso existe o `created_at`. Para apagar logs com mais de 30 dias
+(2592000 segundos):
+
+```js
+db.logs.createIndex({ created_at: 1 }, { expireAfterSeconds: 2592000 })
+```
+
+Use o nome da coleção configurada. O índice expira só documentos que têm `created_at`; os gravados antes desta versão
+não têm o campo e ficam sem expirar. Atenção: coleção *capped* (tamanho fixo) não aceita índice TTL. Escolha entre
+retenção por tamanho (capped) e por tempo (TTL).
+
+### Resiliência e timeouts
+
+A gravação do log nunca derruba a requisição. Com `MONGO_LOG_FAIL_SILENTLY=true` (padrão), a falha do MongoDB é
+registrada uma vez em `error_log` e o log é descartado. `MONGO_LOG_TIMEOUT_MS` (padrão `1000`) limita a espera: sem ele,
+o driver esperava ~10 s por tentativa. Uma `MONGO_LOG_URI` que já traz `serverSelectionTimeoutMS`, `connectTimeoutMS` ou
+`socketTimeoutMS` mantém o valor dela.
 
 `exception($e, $context)` grava nível `error`, mensagem `Unhandled exception` e, em `context`, a chave `exception`
 com `class` e `code` (a mensagem da exceção não é copiada, para não vazar dado sensível).
@@ -235,6 +283,9 @@ O framework 2 carrega a extensão sozinho a partir do ambiente, por meio de
 | `collection`    | `MONGO_LOG_COLLECTION`  | `logs`              |
 | `username`      | `MONGO_LOG_USERNAME`    | `null`              |
 | `password`      | `MONGO_LOG_PASSWORD`    | `null`              |
+
+As opções `timeout_ms` e `fail_silently` não são repassadas pelo bootstrap do framework; o pacote lê direto do ambiente
+`MONGO_LOG_TIMEOUT_MS` (padrão `1000`) e `MONGO_LOG_FAIL_SILENTLY` (padrão `true`).
 
 Por isso o construtor da extensão precisa continuar recebendo um único array (o segundo argumento é opcional). O
 framework lança `RuntimeException` com `Instale elavora/api-log-mongodb para usar LOG_DRIVER=mongodb.` quando o pacote
