@@ -174,7 +174,9 @@ final class MongoLogExtensionTest extends TestCase
 
         $application->container()->get(LogWriter::class)->write(['message' => 'oi']);
 
-        self::assertSame([['api_logs.logs', ['message' => 'oi']]], $stored);
+        self::assertSame('api_logs.logs', $stored[0][0]);
+        self::assertSame('oi', $stored[0][1]['message']);
+        self::assertArrayHasKey('created_at', $stored[0][1]);
     }
 
     private function silentWriter(): LogWriter
