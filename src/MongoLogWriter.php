@@ -44,7 +44,7 @@ final class MongoLogWriter implements LogWriter
             ? static function (string $message): void {
                 error_log($message);
             }
-            : Closure::fromCallable($reportError);
+        : Closure::fromCallable($reportError);
     }
 
     /**
